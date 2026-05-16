@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monster Truck Pro Scorer</title>
+    <style>
+        :root {
+            --bg: #121212;
+            --card: #1e1e1e;
+            --accent: #00e676;
+            --danger: #f44336;
+            --text: #ffffff;
+        }
+        body { font-family: 'Segoe UI', Arial, sans-serif; background: var(--bg); color: var(--text); padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        .container { width: 100%; max-width: 600px; background: var(--card); padding: 25px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        h1 { color: var(--accent); text-align: center; font-family: 'Impact', sans-serif; letter-spacing: 2px; }
+        label { display: block; margin: 15px 0 5px; font-weight: bold; color: #bbb; }
+        select, .stunt-list { width: 100%; padding: 10px; border-radius: 6px; background: #333; color: white; border: 1px solid #444; }
+        .stunt-list { height: 150px; overflow-y: scroll; }
+        .stunt-item { display: flex; align-items: center; padding: 5px; cursor: pointer; }
+        .stunt-item:hover { background: #444; }
+        .checkbox-group { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 15px 0; border: 1px solid #333; padding: 15px; border-radius: 8px; }
+        .btn { width: 100%; padding: 15px; margin-top: 20px; border: none; border-radius: 8px; background: var(--accent); color: black; font-weight: bold; cursor: pointer; font-size: 1.1rem; }
+        .btn:hover { background: #00c853; }
+        #scoreBoard { margin-top: 25px; padding: 20px; background: #000; border: 2px solid var(--accent); text-align: center; border-radius: 8px; }
+        #scoreTitle { color: var(--accent); font-family: 'Courier New', monospace; font-size: 1.4rem; }
+        table { width: 100%; margin-top: 20px; border-collapse: collapse; background: #1a1a1a; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #333; }
+        th { color: var(--accent); }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🏟️ PRO SCORER</h1>
+
+    <label>SELECT TRUCK</label>
+    <select id="truckSelect"></select>
+
+    <label>EVENT TYPE</label>
+    <select id="modeSelect">
+        <option value="Freestyle">Freestyle</option>
+        <option value="2-Wheel Stunts">2-Wheel Stunts</option>
+        <option value="Racing">Racing</option>
+    </select>
+
+    <label>STUNTS PERFORMED (Check all that apply)</label>
+    <div class="stunt-list" id="stuntList"></div>
+
+    <div class="checkbox-group">
+        <div><input type="checkbox" id="big_air"> <label style="display:inline; color:#4caf50;">Big Air</label></div>
+        <div><input type="checkbox" id="save"> <label style="display:inline; color:#4caf50;">Great Save</label></div>
+        <div><input type="checkbox" id="crash"> <label style="display:inline; color:#f44336;">Early Crash</label></div>
+        <div><input type="checkbox" id="rollover"> <label style="display:inline; color:#f44336;">Rollover</label></div>
+        <div><input type="checkbox" id="stall"> <label style="display:inline; color:#ff9800;">Stall</label></div>
+    </div>
+
+    <button class="btn" onclick="calculateScore()">GENERATE OFFICIAL SCORE</button>
+
+    <div id="scoreBoard">
+        <div id="scoreTitle">AWAITING RUN...</div>
+        <div id="scoreDetail" style="font-size: 0.9rem; margin-top:10px; color: #888;"></div>
+    </div>
+
+    <table id="leaderboard">
+        <thead>
+            <tr><th>Truck</th><th>Mode</th><th>Result</th></tr>
+        </thead>
+        <tbody id="leaderboardBody"></tbody>
+    </table>
+</div>
+
+<script>
+    const trucks = [
+        "Alien Invasion", "Avenger", "AXE", "Backwards Bob", "Batman", "Black Panther", "Black Pearl", "Blue Thunder", "Brutus", "Bulldozer", "Captain's Curse", "Classroom Crusher", "Captain America", "Dragon", "Earth Shaker", "El Toro Loco", "Excaliber", "Grave Digger", "Hotsy", "Iron Man", "JCB DIGatron", "Jester", "Jurassic Attack", "Just Get-Er-Done II", "Kraken", "Krazy Train", "Lucas Oil Crusader", "Lucas Stabilizer", "Max-D (Maximum Destruction)", "Mayhem", "Megalodon", "Mohawk Warrior", "Monster Mutt", "Monster Mutt Dalmatian", "Monster Mutt Rottweiler", "Northern Nightmare", "Over Bored", "Pirate's Curse", "Plane Krazy", "Raminator", "Rammunition", "Scooby-Doo", "Shocker", "Soldier Fortune", "Soldier Fortune Black Ops", "Son-uva Digger", "Sparkle Smash", "Stone Crusher", "Sudden Impact", "Tech Deck Wreck Deck", "Terminal Velocity", "The Amazing Spider-Man", "Thor", "ThunderROARus", "Tom Meents (Max-D variants)", "Uproar", "Velociraptor", "Vendetta", "Whiplash", "Wild Side", "Zombie"
+    ].sort();
+
+    const stuntWeights = {
+        "Wheelie": 0.6, "Sky Wheelie": 1.2, "Slap Wheelie": 0.9,
+        "Stoppie (Nose Wheelie)": 1.1, "Moonwalk": 1.5, "Bicycle": 1.3,
+        "Popper": 0.5, "Walk It": 1.0, "Pogo": 1.5
+    };
+
+    // Populate Dropdowns
+    const truckSelect = document.getElementById('truckSelect');
+    trucks.forEach(t => truckSelect.add(new Option(t, t)));
+
+    const stuntDiv = document.getElementById('stuntList');
+    for (const [stunt, pts] of Object.entries(stuntWeights)) {
+        stuntDiv.innerHTML += `<div class="stunt-item"><input type="checkbox" value="${pts}" class="stunt-check"> ${stunt} (+${pts})</div>`;
+    }
+
+    function calculateScore() {
+        const truck = truckSelect.value;
+        const mode = document.getElementById('modeSelect').value;
+        
+        let stuntPts = 0;
+        document.querySelectorAll('.stunt-check:checked').forEach(c => stuntPts += parseFloat(c.value));
+
+        let bonus = (document.getElementById('big_air').checked ? 1.5 : 0) + (document.getElementById('save').checked ? 2.0 : 0);
+        let penalty = (document.getElementById('crash').checked ? 3.0 : 0) + (document.getElementById('rollover').checked ? 2.0 : 0) + (document.getElementById('stall').checked ? 1.0 : 0);
+
+        let resultStr = "";
+        if (mode === "Racing") {
+            let time = (Math.random() * (17.5 - 14.0) + 14.0) + (penalty * 0.5);
+            resultStr = time.toFixed(3) + "s";
+            document.getElementById('scoreTitle').innerText = resultStr;
+            document.getElementById('scoreDetail').innerText = `Truck: ${truck} | Penalty: +${(penalty*0.5).toFixed(1)}s`;
+        } else {
+            let base = Math.random() * (4.5 - 3.0) + 3.0;
+            let final = Math.max(1.0, Math.min(10.0, base + stuntPts + bonus - penalty)).toFixed(2);
+            resultStr = final + " pts";
+            document.getElementById('scoreTitle').innerText = resultStr;
+            document.getElementById('scoreDetail').innerText = `Stunts: +${stuntPts.toFixed(1)} | Bonus: +${bonus} | Penalty: -${penalty}`;
+        }
+
+        // Add to Table
+        const row = document.getElementById('leaderboardBody').insertRow(0);
+        row.innerHTML = `<td>${truck}</td><td>${mode}</td><td>${resultStr}</td>`;
+    }
+</script>
+
+</body>
+</html>
