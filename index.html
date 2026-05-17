@@ -91,7 +91,7 @@
         stuntDiv.innerHTML += `<div class="stunt-item"><input type="checkbox" value="${pts}" class="stunt-check"> ${stunt} (+${pts})</div>`;
     }
 
-   function calculateScore() {
+function calculateScore() {
     const truck = truckSelect.value;
     const mode = document.getElementById('modeSelect').value;
     
@@ -149,10 +149,6 @@
         document.getElementById('scoreDetail').innerText = `Stunts: +${stuntPoints.toFixed(1)} | Bonus: +${bonus.toFixed(1)} | Penalty: -${penalty.toFixed(1)}`;
     }
 
-    // Update Leaderboard
-    const row = document.getElementById('leaderboardBody').insertRow(0);
-    row.innerHTML = `<td>${truck}</td><td>${mode}</td><td><strong>${resultStr}</strong></td>`;
-}
 </script>
 
 </body>
