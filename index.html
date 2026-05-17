@@ -91,34 +91,68 @@
         stuntDiv.innerHTML += `<div class="stunt-item"><input type="checkbox" value="${pts}" class="stunt-check"> ${stunt} (+${pts})</div>`;
     }
 
-    function calculateScore() {
-        const truck = truckSelect.value;
-        const mode = document.getElementById('modeSelect').value;
+   function calculateScore() {
+    const truck = truckSelect.value;
+    const mode = document.getElementById('modeSelect').value;
+    
+    // 1. Stunt Calculation (Stricter Multiplier)
+    let selectedStunts = document.querySelectorAll('.stunt-check:checked');
+    let stuntPoints = 0;
+    
+    // Each additional stunt is worth 30% less than the one before it
+    // This prevents "point stacking" from just checking boxes.
+    selectedStunts.forEach((checkbox, index) => {
+        let val = parseFloat(checkbox.value);
+        stuntPoints += val * Math.pow(0.7, index); 
+    });
+
+    // 2. Specialized Incident Math
+    let bonus = (document.getElementById('big_air').checked ? 1.0 : 0) + 
+                (document.getElementById('save').checked ? 1.5 : 0);
+                
+    // Penalties are now much heavier to punish bad runs
+    let penalty = (document.getElementById('crash').checked ? 4.5 : 0) + 
+                  (document.getElementById('rollover').checked ? 2.5 : 0) + 
+                  (document.getElementById('stall').checked ? 1.5 : 0);
+
+    let resultStr = "";
+
+    if (mode === "Racing") {
+        // Racing logic (Strict timing)
+        let baseTime = Math.random() * (16.2 - 14.5) + 14.5;
+        let penaltySeconds = (penalty * 0.75); // Penalties hurt more in racing now
+        let finalTime = (baseTime + penaltySeconds).toFixed(3);
+        resultStr = finalTime + "s";
         
-        let stuntPts = 0;
-        document.querySelectorAll('.stunt-check:checked').forEach(c => stuntPts += parseFloat(c.value));
-
-        let bonus = (document.getElementById('big_air').checked ? 1.5 : 0) + (document.getElementById('save').checked ? 2.0 : 0);
-        let penalty = (document.getElementById('crash').checked ? 3.0 : 0) + (document.getElementById('rollover').checked ? 2.0 : 0) + (document.getElementById('stall').checked ? 1.0 : 0);
-
-        let resultStr = "";
-        if (mode === "Racing") {
-            let time = (Math.random() * (17.5 - 14.0) + 14.0) + (penalty * 0.5);
-            resultStr = time.toFixed(3) + "s";
-            document.getElementById('scoreTitle').innerText = resultStr;
-            document.getElementById('scoreDetail').innerText = `Truck: ${truck} | Penalty: +${(penalty*0.5).toFixed(1)}s`;
+        document.getElementById('scoreTitle').innerText = resultStr;
+        document.getElementById('scoreDetail').innerText = `Pure Time: ${baseTime.toFixed(3)}s | Penalties: +${penaltySeconds.toFixed(2)}s`;
+    } else {
+        // Freestyle & 2-Wheel (The Strict Curve)
+        let showmanshipBase = Math.random() * (2.5 - 1.5) + 1.5;
+        let rawScore = showmanshipBase + stuntPoints + bonus - penalty;
+        
+        // --- THE LOGARITHMIC CAP ---
+        // If the score is high, we compress it so a 10.0 is nearly impossible.
+        let finalScore;
+        if (rawScore > 7.5) {
+            // This math "stretches" the last 2.5 points significantly
+            finalScore = 7.5 + (Math.log10(rawScore - 6.5) * 1.5);
         } else {
-            let base = Math.random() * (4.5 - 3.0) + 3.0;
-            let final = Math.max(1.0, Math.min(10.0, base + stuntPts + bonus - penalty)).toFixed(2);
-            resultStr = final + " pts";
-            document.getElementById('scoreTitle').innerText = resultStr;
-            document.getElementById('scoreDetail').innerText = `Stunts: +${stuntPts.toFixed(1)} | Bonus: +${bonus} | Penalty: -${penalty}`;
+            finalScore = rawScore;
         }
 
-        // Add to Table
-        const row = document.getElementById('leaderboardBody').insertRow(0);
-        row.innerHTML = `<td>${truck}</td><td>${mode}</td><td>${resultStr}</td>`;
+        // Final Clamp (Minimum 1.0, Maximum 9.99 unless everything is perfect)
+        finalScore = Math.max(1.0, Math.min(10.0, finalScore)).toFixed(2);
+        
+        resultStr = finalScore + " pts";
+        document.getElementById('scoreTitle').innerText = resultStr;
+        document.getElementById('scoreDetail').innerText = `Stunts: +${stuntPoints.toFixed(1)} | Bonus: +${bonus.toFixed(1)} | Penalty: -${penalty.toFixed(1)}`;
     }
+
+    // Update Leaderboard
+    const row = document.getElementById('leaderboardBody').insertRow(0);
+    row.innerHTML = `<td>${truck}</td><td>${mode}</td><td><strong>${resultStr}</strong></td>`;
+}
 </script>
 
 </body>
